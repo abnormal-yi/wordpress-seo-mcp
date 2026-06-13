@@ -6,7 +6,7 @@ describe("EventBus", () => {
     const bus = new EventBus();
     const handler = vi.fn();
     bus.on("analysis:complete", handler);
-    bus.emit({ type: "analysis:complete", payload: { postId: 1 }, metadata: { correlationId: "1", timestamp: Date.now() } });
+    bus.emit("analysis:complete", { postId: 1 }, { siteId: "test" });
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
@@ -14,7 +14,7 @@ describe("EventBus", () => {
     const bus = new EventBus();
     const handler = vi.fn();
     bus.on("analysis:complete", handler);
-    bus.emit({ type: "apply:start", payload: {}, metadata: { correlationId: "1", timestamp: Date.now() } });
+    bus.emit("apply:start", {});
     expect(handler).not.toHaveBeenCalled();
   });
 
@@ -22,8 +22,17 @@ describe("EventBus", () => {
     const bus = new EventBus();
     const handler = vi.fn();
     bus.on("analysis:*", handler);
-    bus.emit({ type: "analysis:start", payload: {}, metadata: { correlationId: "1", timestamp: Date.now() } });
-    bus.emit({ type: "analysis:complete", payload: {}, metadata: { correlationId: "2", timestamp: Date.now() } });
+    bus.emit("analysis:start", {});
+    bus.emit("analysis:complete", {});
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
+  it("supports dot-notation in wildcards", () => {
+    const bus = new EventBus();
+    const handler = vi.fn();
+    bus.on("error.*", handler);
+    bus.emit("error.threshold", {});
+    bus.emit("error.timeout", {});
     expect(handler).toHaveBeenCalledTimes(2);
   });
 
@@ -31,7 +40,7 @@ describe("EventBus", () => {
     const bus = new EventBus();
     const handler = vi.fn();
     bus.on("**", handler);
-    bus.emit({ type: "any:event", payload: {}, metadata: { correlationId: "1", timestamp: Date.now() } });
+    bus.emit("any:event", {});
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
@@ -39,9 +48,9 @@ describe("EventBus", () => {
     const bus = new EventBus();
     const handler = vi.fn();
     bus.on("analysis:complete", handler, { siteId: "site-a" });
-    bus.emit({ type: "analysis:complete", payload: {}, metadata: { correlationId: "1", siteId: "site-b", timestamp: Date.now() } });
+    bus.emit("analysis:complete", {}, { siteId: "site-b" });
     expect(handler).not.toHaveBeenCalled();
-    bus.emit({ type: "analysis:complete", payload: {}, metadata: { correlationId: "2", siteId: "site-a", timestamp: Date.now() } });
+    bus.emit("analysis:complete", {}, { siteId: "site-a" });
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
@@ -50,7 +59,16 @@ describe("EventBus", () => {
     const handler = vi.fn();
     bus.on("test", handler);
     bus.off("test", handler);
-    bus.emit({ type: "test", payload: {}, metadata: { correlationId: "1", timestamp: Date.now() } });
+    bus.emit("test", {});
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("supports returned unsubscribe function", () => {
+    const bus = new EventBus();
+    const handler = vi.fn();
+    const unsub = bus.on("test", handler);
+    unsub();
+    bus.emit("test", {});
     expect(handler).not.toHaveBeenCalled();
   });
 
@@ -58,8 +76,34 @@ describe("EventBus", () => {
     const bus = new EventBus();
     let resolved = false;
     bus.on("test", async () => { await Promise.resolve(); resolved = true; });
-    bus.emit({ type: "test", payload: {}, metadata: { correlationId: "1", timestamp: Date.now() } });
+    bus.emit("test", {});
     await new Promise(r => setTimeout(r, 10));
     expect(resolved).toBe(true);
+  });
+
+  it("clear() removes all subscriptions", () => {
+    const bus = new EventBus();
+    bus.on("test", () => {});
+    bus.on("other", () => {});
+    expect(bus.listenerCount()).toBe(2);
+    bus.clear();
+    expect(bus.listenerCount()).toBe(0);
+  });
+
+  it("listenerCount() returns subscription count", () => {
+    const bus = new EventBus();
+    expect(bus.listenerCount()).toBe(0);
+    bus.on("a", () => {});
+    expect(bus.listenerCount()).toBe(1);
+  });
+
+  it("generates correlationId and timestamp when not provided", () => {
+    const bus = new EventBus();
+    const handler = vi.fn();
+    bus.on("test", handler);
+    bus.emit("test", {});
+    const event = handler.mock.calls[0][0];
+    expect(event.metadata.correlationId).toBeDefined();
+    expect(event.metadata.timestamp).toBeGreaterThan(0);
   });
 });

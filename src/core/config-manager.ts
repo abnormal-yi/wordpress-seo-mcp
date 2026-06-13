@@ -25,7 +25,7 @@ export class ConfigManager {
   }
 
   get<T = unknown>(path: string, siteId?: string, requestOverrides?: Partial<AppConfig>): T {
-    let config = { ...this.globalConfig };
+    let config: AppConfig = { ...this.globalConfig };
     if (siteId && this.siteConfigs.has(siteId)) {
       config = this.mergeDeep(config, this.siteConfigs.get(siteId)!);
     }
@@ -44,7 +44,7 @@ export class ConfigManager {
   }
 
   getAll(siteId?: string): AppConfig {
-    let config = { ...this.globalConfig };
+    let config: AppConfig = { ...this.globalConfig };
     if (siteId && this.siteConfigs.has(siteId)) {
       config = this.mergeDeep(config, this.siteConfigs.get(siteId)!);
     }
@@ -69,14 +69,14 @@ export class ConfigManager {
     }
   }
 
-  private mergeDeep<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
+  private mergeDeep<T>(target: T, source: Partial<T>): T {
     const result = { ...target };
     for (const key of Object.keys(source)) {
       const k = key as keyof T;
       if (source[k] !== null && typeof source[k] === "object" && !Array.isArray(source[k])) {
         result[k] = this.mergeDeep(
-          (result[k] as Record<string, unknown>) || {},
-          source[k] as Record<string, unknown>
+          (result[k] as object) || {},
+          source[k] as object
         ) as T[keyof T];
       } else if (source[k] !== undefined) {
         result[k] = source[k] as T[keyof T];
