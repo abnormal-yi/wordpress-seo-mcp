@@ -22,15 +22,19 @@ export class PluginSandbox {
     return this.executeWithTimeout(plugin.manifest.name, "apply", () => plugin.apply!(params));
   }
 
-  private async executeWithTimeout<T>(pluginName: string, hook: string, fn: () => Promise<T>): Promise<T> {
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new TimeoutError(`Plugin "${pluginName}" ${hook} timed out after ${this.config.timeoutMs}ms`)), this.config.timeoutMs)
-    );
-    try {
-      return await Promise.race([fn(), timeout]);
-    } catch (err) {
-      if (err instanceof TimeoutError) throw err;
-      throw new Error(`Plugin "${pluginName}" ${hook} failed: ${err instanceof Error ? err.message : String(err)}`);
-    }
+  private executeWithTimeout<T>(pluginName: string, hook: string, fn: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new TimeoutError(`Plugin "${pluginName}" ${hook} timed out after ${this.config.timeoutMs}ms`)),
+        this.config.timeoutMs
+      );
+      fn()
+        .then((r) => { clearTimeout(timer); resolve(r); })
+        .catch((e) => {
+          clearTimeout(timer);
+          if (e instanceof TimeoutError) reject(e);
+          else reject(new Error(`Plugin "${pluginName}" ${hook} failed: ${e instanceof Error ? e.message : String(e)}`));
+        });
+    });
   }
 }

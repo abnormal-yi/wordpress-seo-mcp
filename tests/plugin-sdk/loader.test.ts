@@ -61,9 +61,9 @@ describe("PluginLoader", () => {
     expect(loader.list()).toHaveLength(0);
   });
 
-  it("handles missing directory gracefully", () => {
+  it("handles missing directory gracefully", async () => {
     const loader = new PluginLoader();
-    const loaded = loader.loadFromDirectory("/nonexistent/path");
+    const loaded = await loader.loadFromDirectory("/nonexistent/path");
     expect(loaded).toEqual([]);
   });
 });

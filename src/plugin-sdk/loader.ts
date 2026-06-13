@@ -3,10 +3,19 @@ import * as path from "path";
 import type { SEOPlugin } from "../types/plugins";
 import { PluginError } from "../infrastructure/error-classes";
 
+async function importPlugin(resolved: string): Promise<SEOPlugin> {
+  try {
+    return require(resolved);
+  } catch {
+    const mod = await import(resolved);
+    return mod.default || mod;
+  }
+}
+
 export class PluginLoader {
   private plugins: Map<string, SEOPlugin> = new Map();
 
-  loadFromDirectory(dirPath: string): SEOPlugin[] {
+  async loadFromDirectory(dirPath: string): Promise<SEOPlugin[]> {
     const loaded: SEOPlugin[] = [];
     if (!fs.existsSync(dirPath)) return loaded;
 
@@ -17,8 +26,7 @@ export class PluginLoader {
         const pkgPath = path.join(pluginDir, "package.json");
         if (!fs.existsSync(pkgPath)) continue;
         try {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const plugin: SEOPlugin = require(pluginDir);
+          const plugin = await importPlugin(pluginDir);
           this.register(plugin);
           loaded.push(plugin);
         } catch (err) {
@@ -26,8 +34,7 @@ export class PluginLoader {
         }
       } else if (entry.name.endsWith(".js") || entry.name.endsWith(".mjs")) {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const plugin: SEOPlugin = require(path.join(dirPath, entry.name));
+          const plugin = await importPlugin(path.join(dirPath, entry.name));
           this.register(plugin);
           loaded.push(plugin);
         } catch (err) {
@@ -38,12 +45,11 @@ export class PluginLoader {
     return loaded;
   }
 
-  loadSingle(filePath: string): SEOPlugin {
+  async loadSingle(filePath: string): Promise<SEOPlugin> {
     const resolved = path.resolve(filePath);
     if (!fs.existsSync(resolved)) throw new PluginError(`Plugin file not found: ${resolved}`);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const plugin: SEOPlugin = require(resolved);
+      const plugin = await importPlugin(resolved);
       this.register(plugin);
       return plugin;
     } catch (err) {
