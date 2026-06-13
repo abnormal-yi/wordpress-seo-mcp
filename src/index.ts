@@ -80,6 +80,9 @@ const workflowEngine = new WorkflowEngine(eventBus);
 const rulesEngine = new RulesEngine(db, eventBus);
 const pipeline = new Pipeline(telemetry);
 
+// Check for scheduled automation rules every 60 seconds
+jobScheduler.schedule("automation-rules-check", "meta", 60000, {});
+
 // Set up clean shutdown
 shutdownHandler.onShutdown(async () => {
   jobScheduler.stopAll();
