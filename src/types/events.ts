@@ -16,7 +16,9 @@ export type SEOEventType =
   | "validation:failed" | "input:rejected"
   | "batch:started" | "batch:completed"
   | "rate-limit:exceeded"
-  | "security:event";
+  | "security:event"
+  | "heal:round-start" | "heal:round-complete" | "heal:complete" | "heal:failed"
+  | "site:heal-queued" | "site:heal-complete";
 
 export interface SEOEvent {
   type: SEOEventType;
