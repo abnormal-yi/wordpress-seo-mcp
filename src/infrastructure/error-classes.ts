@@ -4,9 +4,11 @@ export class SEOError extends Error {
     public code: string,
     public statusCode: number = 500,
     public retryable: boolean = false,
-    public details?: Record<string, unknown>
+    public details?: Record<string, unknown>,
+    options?: ErrorOptions
   ) {
-    super(message);
+    super(message, options);
+    Object.setPrototypeOf(this, new.target.prototype);
     this.name = "SEOError";
   }
 }
