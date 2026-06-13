@@ -103,6 +103,40 @@ const MIGRATIONS: Migration[] = [
       updated_at INTEGER NOT NULL
     );`,
   },
+  {
+    version: 8,
+    name: "create_monitor_tables",
+    sql: `CREATE TABLE IF NOT EXISTS score_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      site_id TEXT NOT NULL,
+      post_id TEXT,
+      score REAL NOT NULL,
+      component_scores TEXT,
+      analyzed_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_score_history_site ON score_history(site_id, analyzed_at);
+    CREATE INDEX IF NOT EXISTS idx_score_history_post ON score_history(post_id, analyzed_at);
+
+    CREATE TABLE IF NOT EXISTS monitor_config (
+      site_id TEXT PRIMARY KEY,
+      min_score REAL NOT NULL DEFAULT 0.5,
+      max_drop_percent REAL NOT NULL DEFAULT 20,
+      window_size INTEGER NOT NULL DEFAULT 5,
+      webhook_url TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS monitor_alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      site_id TEXT NOT NULL,
+      alert_type TEXT NOT NULL,
+      current_score REAL NOT NULL,
+      previous_avg REAL NOT NULL,
+      threshold REAL NOT NULL,
+      drop_percent REAL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_monitor_alerts_site ON monitor_alerts(site_id, created_at);`,
+  },
 ];
 
 export class MigrationRunner {
