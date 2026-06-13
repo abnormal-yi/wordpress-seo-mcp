@@ -45,6 +45,7 @@ import { PluginSandbox } from './plugin-sdk/sandbox.js';
 import { WebhookDispatcher } from './infrastructure/webhook-dispatcher.js';
 import { WorkflowEngine } from './infrastructure/workflow-engine.js';
 import { RulesEngine } from './infrastructure/rules-engine.js';
+import { ActionDispatcher } from './infrastructure/action-dispatcher.js';
 import { Pipeline } from './middleware/pipeline.js';
 
 // Initialize database and run migrations
@@ -77,7 +78,6 @@ const webhookDispatcher = new WebhookDispatcher();
 const priorityQueue = new PriorityQueue(undefined, undefined, eventBus);
 const jobScheduler = new JobScheduler(priorityQueue);
 const workflowEngine = new WorkflowEngine(eventBus);
-const rulesEngine = new RulesEngine(db, eventBus);
 const pipeline = new Pipeline(telemetry);
 
 // Check for scheduled automation rules every 60 seconds
@@ -108,6 +108,8 @@ const server = createMcpServer({
 // Existing components (using new infra where possible)
 const sitePool = new SitePool(eventBus, lockManager, telemetry);
 const storage = new SqliteStorage();
+const actionDispatcher = new ActionDispatcher(sitePool, scoringEngine, circuitBreaker, lockManager, priorityQueue, eventBus);
+const rulesEngine = new RulesEngine(db, eventBus, actionDispatcher);
 const registry = new ToolRegistry();
 
 const gscApiKey = process.env['GSC_API_KEY'];
@@ -127,7 +129,7 @@ registry.register(createRollbackPlugin(sitePool, storage));
 registry.register(createSitemapPlugin(sitePool, gscClient));
 registry.register(createKeywordPlugin());
 registry.register(createIntegrationPlugin(gscClient, undefined));
-registry.register(createOrchestrationPlugin(rulesEngine));
+registry.register(createOrchestrationPlugin(rulesEngine, actionDispatcher));
 registry.register(createBatchAnalyzePlugin(sitePool, scoringEngine, snapshotManager, eventBus));
 registry.register(createBatchApplyPlugin(sitePool, snapshotManager, eventBus));
 registry.register(createMultiSitePlugin(sitePool, scoringEngine, snapshotManager, eventBus));

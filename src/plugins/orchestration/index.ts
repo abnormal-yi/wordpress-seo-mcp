@@ -1,8 +1,11 @@
 import { z } from "zod";
 import type { ToolPlugin } from "../../orchestrator.js";
 import type { RulesEngine } from "../../infrastructure/rules-engine.js";
+import type { ActionDispatcher } from "../../infrastructure/action-dispatcher.js";
+import { createHealPlugin } from "./heal.js";
 
-export function createOrchestrationPlugin(rulesEngine: RulesEngine): ToolPlugin {
+export function createOrchestrationPlugin(rulesEngine: RulesEngine, dispatcher: ActionDispatcher): ToolPlugin {
+  const healPlugin = createHealPlugin(dispatcher);
   return {
     id: "orchestration",
     tools: [
@@ -17,7 +20,7 @@ export function createOrchestrationPlugin(rulesEngine: RulesEngine): ToolPlugin 
           conditionField: z.string().optional().describe("Field to check in event payload"),
           conditionOperator: z.enum(["eq", "neq", "gt", "gte", "lt", "lte"]).optional(),
           conditionValue: z.any().optional(),
-          actionType: z.enum(["batch-analyze", "batch-apply", "multi-site-analyze", "multi-site-apply", "webhook", "log"]),
+          actionType: z.enum(["batch-analyze", "batch-apply", "multi-site-analyze", "multi-site-apply", "webhook", "log", "heal-post", "heal-site"]),
           actionParams: z.record(z.any()).default({}),
         }),
         handler: async (args) => {
@@ -53,6 +56,7 @@ export function createOrchestrationPlugin(rulesEngine: RulesEngine): ToolPlugin 
           return { success: removed, data: { removed } };
         },
       },
+      ...healPlugin.tools,
     ],
   };
 }

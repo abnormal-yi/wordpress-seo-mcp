@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import { EventBus } from "../core/event-bus";
+import { ActionDispatcher } from "./action-dispatcher";
 
 export interface RuleCondition {
   field: string;
@@ -8,7 +9,7 @@ export interface RuleCondition {
 }
 
 export interface RuleAction {
-  type: "batch-analyze" | "batch-apply" | "multi-site-analyze" | "multi-site-apply" | "webhook" | "log";
+  type: "batch-analyze" | "batch-apply" | "multi-site-analyze" | "multi-site-apply" | "webhook" | "log" | "heal-post" | "heal-site";
   params: Record<string, unknown>;
 }
 
@@ -33,10 +34,12 @@ export class RulesEngine {
   private rules: Map<string, Rule> = new Map();
   private bus: EventBus;
   private db: Database.Database;
+  private dispatcher: ActionDispatcher;
 
-  constructor(db: Database.Database, bus: EventBus) {
+  constructor(db: Database.Database, bus: EventBus, dispatcher: ActionDispatcher) {
     this.db = db;
     this.bus = bus;
+    this.dispatcher = dispatcher;
     this.loadRules();
     this.bus.on("**", (event) => this.handleEvent(event));
   }
@@ -104,7 +107,24 @@ export class RulesEngine {
 
   private dispatchAction(action: RuleAction, event: { type: string; payload: unknown; metadata: { siteId?: string } }): void {
     console.log(`[RulesEngine] Triggered ${action.type} by event ${event.type}`);
-    // Action dispatch is handled by the caller (tools will be invoked via MCP)
-    // For now, log to audit and emit a trigger event
+    const siteId = event.metadata?.siteId || "default";
+
+    if (action.type === "heal-post") {
+      const postId = (event.payload as Record<string, unknown>)?.postId as string | number | undefined;
+      if (postId != null) {
+        this.dispatcher.healPost(siteId, postId).catch((err) => {
+          console.error(`[RulesEngine] heal-post failed for ${siteId}:${postId}`, err);
+        });
+      }
+      return;
+    }
+
+    if (action.type === "heal-site") {
+      const sync = action.params?.sync === true;
+      this.dispatcher.healSite(siteId, sync).catch((err) => {
+        console.error(`[RulesEngine] heal-site failed for ${siteId}`, err);
+      });
+      return;
+    }
   }
 }

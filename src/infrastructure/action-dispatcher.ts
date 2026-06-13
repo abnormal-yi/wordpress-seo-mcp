@@ -90,7 +90,7 @@ export class ActionDispatcher {
 
       while (rounds < maxRounds) {
         const post = await client.getPost(postId as number);
-        currentScore = this.scorePost(post as Record<string, unknown>);
+        currentScore = this.scorePost(post as unknown as Record<string, unknown>);
 
         if (currentScore >= 0.7) {
           this.roundCounts.delete(key);
