@@ -31,6 +31,8 @@ function calculateDelay(attempt: number, config: RetryConfig): number {
     case "fixed":
       d = Math.min(baseDelay, config.maxDelayMs);
       break;
+    default:
+      d = baseDelay;
   }
   if (config.jitter) {
     d = d * (0.5 + Math.random() * 0.5);

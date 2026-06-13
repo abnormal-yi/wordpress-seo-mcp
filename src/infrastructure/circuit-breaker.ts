@@ -1,5 +1,4 @@
 import { EventBus } from "../core/event-bus";
-import type { SEOEventType } from "../types/events";
 
 export type CircuitState = "closed" | "open" | "half-open";
 
