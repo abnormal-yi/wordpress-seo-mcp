@@ -18,6 +18,7 @@ import { createRollbackPlugin } from './plugins/rollback.js';
 import { createSitemapPlugin } from './plugins/sitemap/index.js';
 import { createKeywordPlugin } from './plugins/keyword/index.js';
 import { createIntegrationPlugin } from './plugins/integration/index.js';
+import { createOrchestrationPlugin } from './plugins/orchestration/index.js';
 
 // Phase 1 Infrastructure
 import { EventBus } from './core/event-bus.js';
@@ -40,6 +41,7 @@ import { PluginLoader } from './plugin-sdk/loader.js';
 import { PluginSandbox } from './plugin-sdk/sandbox.js';
 import { WebhookDispatcher } from './infrastructure/webhook-dispatcher.js';
 import { WorkflowEngine } from './infrastructure/workflow-engine.js';
+import { RulesEngine } from './infrastructure/rules-engine.js';
 import { Pipeline } from './middleware/pipeline.js';
 
 // Initialize database and run migrations
@@ -72,6 +74,7 @@ const webhookDispatcher = new WebhookDispatcher();
 const priorityQueue = new PriorityQueue(undefined, undefined, eventBus);
 const jobScheduler = new JobScheduler(priorityQueue);
 const workflowEngine = new WorkflowEngine(eventBus);
+const rulesEngine = new RulesEngine(db, eventBus);
 const pipeline = new Pipeline(telemetry);
 
 // Set up clean shutdown
@@ -118,6 +121,7 @@ registry.register(createRollbackPlugin(sitePool, storage));
 registry.register(createSitemapPlugin(sitePool, gscClient));
 registry.register(createKeywordPlugin());
 registry.register(createIntegrationPlugin(gscClient, undefined));
+registry.register(createOrchestrationPlugin(rulesEngine));
 
 // Register new Phase 1 infrastructure tools
 registry.register({
