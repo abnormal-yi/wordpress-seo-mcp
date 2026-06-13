@@ -48,7 +48,12 @@ export function createMultiSitePlugin(
         handler: async (args) => {
           const [canarySite, ...restSites] = args.siteIds;
 
-          const canaryClient = pool.getClient(canarySite);
+          let canaryClient;
+          try {
+            canaryClient = pool.getClient(canarySite);
+          } catch (err) {
+            return { success: false, error: `Invalid canary site '${canarySite}': ${String(err)}` };
+          }
           let canaryScore = 0;
           try {
             const posts = await canaryClient.getPosts() as any[];

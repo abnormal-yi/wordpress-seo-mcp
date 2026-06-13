@@ -155,6 +155,7 @@ export class ActionDispatcher {
         this.bus.emit("site:heal-complete", { siteId, postsHealed: healed, postsFailed: failed });
         return { siteId, postsHealed: healed, postsFailed: failed, totalRounds };
       } catch (err) {
+        console.error(`[ActionDispatcher] healSite sync failed for ${siteId}:`, err);
         return { siteId, postsHealed: 0, postsFailed: 0, totalRounds: 0 };
       }
     }

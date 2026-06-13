@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { SEOEventType, SEOEvent, SEOEventHandler } from "../types/events";
 
 interface Subscription {
@@ -37,7 +38,7 @@ export class EventBus {
       type,
       payload,
       metadata: {
-        correlationId: metadata?.correlationId ?? crypto.randomUUID(),
+        correlationId: metadata?.correlationId ?? randomUUID(),
         siteId: metadata?.siteId,
         timestamp: metadata?.timestamp ?? Date.now(),
       },

@@ -22,7 +22,12 @@ export function createBatchAnalyzePlugin(
           postType: z.string().optional().describe("Filter by post type (e.g. 'post', 'page')"),
         }),
         handler: async (args) => {
-          const client = pool.getClient(args.siteId);
+          let client;
+          try {
+            client = pool.getClient(args.siteId);
+          } catch (err) {
+            return { success: false, error: `Invalid site '${args.siteId}': ${String(err)}` };
+          }
 
           let posts: any[];
           try {

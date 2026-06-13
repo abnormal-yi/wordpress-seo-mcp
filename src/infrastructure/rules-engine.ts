@@ -47,16 +47,20 @@ export class RulesEngine {
   private loadRules(): void {
     const rows = this.db.prepare("SELECT * FROM automation_rules WHERE enabled = 1").all() as any[];
     for (const row of rows) {
-      this.rules.set(row.id, {
-        id: row.id,
-        name: row.name,
-        enabled: !!row.enabled,
-        trigger: JSON.parse(row.trigger_json),
-        condition: row.condition_json ? JSON.parse(row.condition_json) : undefined,
-        action: JSON.parse(row.action_json),
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      });
+      try {
+        this.rules.set(row.id, {
+          id: row.id,
+          name: row.name,
+          enabled: !!row.enabled,
+          trigger: JSON.parse(row.trigger_json),
+          condition: row.condition_json ? JSON.parse(row.condition_json) : undefined,
+          action: JSON.parse(row.action_json),
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        });
+      } catch (err) {
+        console.error(`[RulesEngine] Skipping malformed rule ${row.id}:`, err);
+      }
     }
   }
 
@@ -84,7 +88,13 @@ export class RulesEngine {
     for (const rule of this.rules.values()) {
       if (rule.trigger.type !== "event") continue;
       if (rule.trigger.pattern) {
-        const regex = new RegExp("^" + rule.trigger.pattern.replace(/\*/g, ".*") + "$");
+        let regex: RegExp;
+        try {
+          regex = new RegExp("^" + rule.trigger.pattern.replace(/\*/g, ".*") + "$");
+        } catch {
+          console.error(`[RulesEngine] Invalid pattern in rule ${rule.id}: ${rule.trigger.pattern}`);
+          continue;
+        }
         if (!regex.test(event.type)) continue;
       }
       if (rule.condition && !this.evaluateCondition(rule.condition, event.payload)) continue;

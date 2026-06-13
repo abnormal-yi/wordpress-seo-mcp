@@ -25,11 +25,17 @@ export function createBatchApplyPlugin(
           dryRun: z.boolean().default(false),
         }),
         handler: async (args) => {
-          const client = pool.getClient(args.siteId);
           const siteKey = `batch-apply:${args.siteId}`;
 
           if (!circuitBreaker.isAllowed(siteKey)) {
             return { success: false, error: "Circuit breaker is open for this site. Too many failures." };
+          }
+
+          let client;
+          try {
+            client = pool.getClient(args.siteId);
+          } catch (err) {
+            return { success: false, error: `Invalid site '${args.siteId}': ${String(err)}` };
           }
 
           // Create pre-snapshot
