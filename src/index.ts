@@ -19,6 +19,7 @@ import { createSitemapPlugin } from './plugins/sitemap/index.js';
 import { createKeywordPlugin } from './plugins/keyword/index.js';
 import { createIntegrationPlugin } from './plugins/integration/index.js';
 import { createOrchestrationPlugin } from './plugins/orchestration/index.js';
+import { createBatchAnalyzePlugin } from './plugins/orchestration/batch-analyze.js';
 
 // Phase 1 Infrastructure
 import { EventBus } from './core/event-bus.js';
@@ -122,6 +123,7 @@ registry.register(createSitemapPlugin(sitePool, gscClient));
 registry.register(createKeywordPlugin());
 registry.register(createIntegrationPlugin(gscClient, undefined));
 registry.register(createOrchestrationPlugin(rulesEngine));
+registry.register(createBatchAnalyzePlugin(sitePool, scoringEngine, snapshotManager, eventBus));
 
 // Register new Phase 1 infrastructure tools
 registry.register({
