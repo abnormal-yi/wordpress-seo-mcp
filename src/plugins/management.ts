@@ -2,8 +2,9 @@ import { z } from 'zod';
 import { SitePool } from '../services/wordpress/site-pool.js';
 import { SiteConfigSchema } from '../types/wordpress.js';
 import { ToolPlugin } from '../orchestrator.js';
+import { Telemetry } from '../infrastructure/telemetry.js';
 
-export function createManagementPlugin(pool: SitePool): ToolPlugin {
+export function createManagementPlugin(pool: SitePool, telemetry?: Telemetry): ToolPlugin {
   return {
     id: 'management',
     tools: [
@@ -16,6 +17,7 @@ export function createManagementPlugin(pool: SitePool): ToolPlugin {
           config: SiteConfigSchema.optional(),
         }),
         handler: async (args) => {
+          telemetry?.incrementCounter("manage_sites.called", 1, { action: args.action });
           switch (args.action) {
             case 'add': {
               if (!args.name || !args.config) {

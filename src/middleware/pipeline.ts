@@ -1,3 +1,5 @@
+import { Telemetry } from '../infrastructure/telemetry.js';
+
 export interface MiddlewareContext {
   tool: string;
   args: Record<string, any>;
@@ -9,8 +11,13 @@ export type MiddlewareFn = (ctx: MiddlewareContext, next: () => Promise<void>) =
 
 export class Pipeline {
   private middlewares: MiddlewareFn[] = [];
+  private telemetry?: Telemetry;
 
-  use(fn: MiddlewareFn) {
+  constructor(telemetry?: Telemetry) {
+    this.telemetry = telemetry;
+  }
+
+  use(fn: MiddlewareFn): void {
     this.middlewares.push(fn);
   }
 
@@ -20,7 +27,15 @@ export class Pipeline {
       if (i <= index) throw new Error('next() called multiple times');
       index = i;
       if (i < this.middlewares.length) {
-        await this.middlewares[i](ctx, () => dispatch(i + 1));
+        const start = Date.now();
+        try {
+          await this.middlewares[i](ctx, () => dispatch(i + 1));
+          this.telemetry?.observeHistogram("middleware.duration", Date.now() - start, { middleware: String(i), tool: ctx.tool });
+        } catch (err) {
+          ctx.errors.push(String(err));
+          this.telemetry?.incrementCounter("middleware.errors", 1, { middleware: String(i), tool: ctx.tool });
+          throw err;
+        }
       }
     };
     await dispatch(0);
