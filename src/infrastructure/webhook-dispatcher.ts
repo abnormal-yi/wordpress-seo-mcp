@@ -48,6 +48,9 @@ export class WebhookDispatcher {
       event, payload, status: "pending", attempts: 0, createdAt: Date.now(),
     };
     this.deliveries.push(delivery);
+    if (this.deliveries.length > this.maxDeliveries) {
+      this.deliveries = this.deliveries.slice(-this.maxDeliveries);
+    }
 
     for (let attempt = 0; attempt < config.maxAttempts; attempt++) {
       delivery.attempts++;
