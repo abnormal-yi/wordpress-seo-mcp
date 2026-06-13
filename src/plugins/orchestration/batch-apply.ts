@@ -37,7 +37,7 @@ export function createBatchApplyPlugin(
 
           let posts: any[];
           try {
-            posts = await client.listPosts(args.postType ? { type: args.postType } : undefined) as any[];
+            posts = await client.getPosts() as any[];
           } catch (err) {
             return { success: false, error: `Failed to fetch posts: ${String(err)}` };
           }

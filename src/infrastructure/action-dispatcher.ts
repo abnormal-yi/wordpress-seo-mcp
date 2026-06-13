@@ -22,6 +22,8 @@ export interface HealSummary {
   totalRounds: number;
 }
 
+type FixType = "meta" | "content" | "technical";
+
 export class ActionDispatcher {
   private roundCounts: Map<string, number> = new Map();
   private bus: EventBus;
@@ -51,6 +53,23 @@ export class ActionDispatcher {
     return `${siteId}:${postId}`;
   }
 
+  private getFixType(round: number): FixType {
+    return round === 0 ? "meta" : round === 1 ? "content" : "technical";
+  }
+
+  private scorePost(post: Record<string, unknown>): number {
+    const hasYoast = !!(post.yoast_head_json);
+    const content = post.content as string | undefined;
+    const hasContent = !!content && content.length > 100;
+    const hasTitle = !!(post.title as string | undefined);
+    const score = this.scoringEngine.score({
+      meta: { score: hasYoast ? 0.8 : 0.3 },
+      content: { score: hasContent ? 0.8 : 0.3 },
+      technical: { score: hasTitle ? 0.7 : 0.4 },
+    });
+    return score.overall;
+  }
+
   async healPost(siteId: string, postId: string | number, dryRun = false): Promise<HealResult> {
     const key = this.roundKey(siteId, postId);
 
@@ -67,11 +86,11 @@ export class ActionDispatcher {
       const maxRounds = 3;
       let previousScore = -1;
       let currentScore = 0;
+      const client = this.pool.getClient(siteId);
 
       while (rounds < maxRounds) {
-        const client = this.pool.getClient(siteId);
         const post = await client.getPost(postId as number);
-        currentScore = 0.5;
+        currentScore = this.scorePost(post as Record<string, unknown>);
 
         if (currentScore >= 0.7) {
           this.roundCounts.delete(key);
@@ -93,7 +112,7 @@ export class ActionDispatcher {
           continue;
         }
 
-        const fixType = rounds === 0 ? "meta" : rounds === 1 ? "content" : "technical";
+        const fixType = this.getFixType(rounds);
         this.bus.emit("heal:round-start", { postId, siteId, round: rounds + 1, fixType });
 
         try {
@@ -111,7 +130,6 @@ export class ActionDispatcher {
       }
 
       this.roundCounts.delete(key);
-      currentScore = 0.6;
       this.bus.emit("heal:complete", { postId, siteId, rounds, finalScore: currentScore, success: currentScore >= 0.7 });
       return { postId, siteId, rounds, finalScore: currentScore, success: currentScore >= 0.7 };
     } finally {
@@ -121,20 +139,24 @@ export class ActionDispatcher {
 
   async healSite(siteId: string, sync = false): Promise<{ jobsEnqueued: number } | HealSummary> {
     if (sync) {
-      const client = this.pool.getClient(siteId);
-      const posts = await client.getPosts() as any[];
-      let healed = 0;
-      let failed = 0;
-      let totalRounds = 0;
-      for (const post of posts) {
-        const postId = post.id || post.ID;
-        const result = await this.healPost(siteId, postId);
-        if (result.success) healed++;
-        else failed++;
-        totalRounds += result.rounds;
+      try {
+        const client = this.pool.getClient(siteId);
+        const posts = await client.getPosts() as any[];
+        let healed = 0;
+        let failed = 0;
+        let totalRounds = 0;
+        for (const post of posts) {
+          const postId = post.id ?? post.ID;
+          const result = await this.healPost(siteId, postId);
+          if (result.success) healed++;
+          else failed++;
+          totalRounds += result.rounds;
+        }
+        this.bus.emit("site:heal-complete", { siteId, postsHealed: healed, postsFailed: failed });
+        return { siteId, postsHealed: healed, postsFailed: failed, totalRounds };
+      } catch (err) {
+        return { siteId, postsHealed: 0, postsFailed: 0, totalRounds: 0 };
       }
-      this.bus.emit("site:heal-complete", { siteId, postsHealed: healed, postsFailed: failed });
-      return { siteId, postsHealed: healed, postsFailed: failed, totalRounds };
     }
 
     const job: Job = {

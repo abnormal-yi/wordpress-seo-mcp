@@ -26,7 +26,7 @@ export function createMultiSitePlugin(
           for (const siteId of args.siteIds) {
             try {
               const client = pool.getClient(siteId);
-              const posts = await client.listPosts(args.postType ? { type: args.postType } : undefined) as any[];
+              const posts = await client.getPosts() as any[];
               const overallScore = posts.length > 0 ? 0.75 : 0;
               results[siteId] = { totalPosts: posts.length, overallScore };
             } catch (err) {
@@ -51,7 +51,7 @@ export function createMultiSitePlugin(
           const canaryClient = pool.getClient(canarySite);
           let canaryScore = 0;
           try {
-            const posts = await canaryClient.listPosts(args.postType ? { type: args.postType } : undefined) as any[];
+            const posts = await canaryClient.getPosts() as any[];
             canaryScore = posts.length > 0 ? 0.8 : 0;
           } catch (err) {
             return { success: false, error: `Canary site ${canarySite} failed: ${String(err)}` };
@@ -69,7 +69,7 @@ export function createMultiSitePlugin(
           for (const siteId of restSites) {
             try {
               const client = pool.getClient(siteId);
-              const posts = await client.listPosts(args.postType ? { type: args.postType } : undefined) as any[];
+              const posts = await client.getPosts() as any[];
               rolloutResults[siteId] = { totalPosts: posts.length, status: "applied" };
             } catch (err) {
               rolloutResults[siteId] = { error: String(err) };

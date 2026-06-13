@@ -1,4 +1,4 @@
-export type JobType = "analyze" | "apply" | "rollback" | "sitemap" | "monitor" | "auto-fix" | "batch-analyze" | "batch-apply";
+export type JobType = "analyze" | "apply" | "rollback" | "sitemap" | "monitor" | "auto-fix" | "batch-analyze" | "batch-apply" | "meta";
 export type JobPriority = "high" | "medium" | "low";
 export type JobStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
 
