@@ -40,7 +40,8 @@ export class StateMachine<S extends string> {
     }
     const from = this.current;
     this.current = to;
-    this.bus?.emit("health:changed", { from, to, state: to });
+    const eventType = transition.event || "health:changed";
+    this.bus?.emit(eventType as any, { from, to, state: to });
     return true;
   }
 

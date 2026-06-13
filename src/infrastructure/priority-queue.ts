@@ -8,7 +8,7 @@ interface QueueEntry {
 
 export class PriorityQueue {
   private queues: Record<QueueLane, QueueEntry[]> = { high: [], medium: [], low: [] };
-  private activeCount: number = 0;
+  private activeCounts: Record<QueueLane, number> = { high: 0, medium: 0, low: 0 };
   private bus?: EventBus;
   private pollTimer?: ReturnType<typeof setInterval>;
 
@@ -32,10 +32,10 @@ export class PriorityQueue {
     this.processNext();
   }
 
-  private dequeue(): Job | undefined {
+  private dequeue(): { job: Job; lane: QueueLane } | undefined {
     for (const lane of ["high", "medium", "low"] as QueueLane[]) {
-      if (this.activeCount < this.concurrency[lane] && this.queues[lane].length > 0) {
-        return this.queues[lane].shift()!.job;
+      if (this.activeCounts[lane] < this.concurrency[lane] && this.queues[lane].length > 0) {
+        return { job: this.queues[lane].shift()!.job, lane };
       }
     }
     return undefined;
@@ -43,19 +43,20 @@ export class PriorityQueue {
 
   private async processNext(): Promise<void> {
     if (!this.worker) return;
-    const job = this.dequeue();
-    if (!job) return;
+    const entry = this.dequeue();
+    if (!entry) return;
 
-    this.activeCount++;
-    this.bus?.emit("queue:job-started", { jobId: job.id, type: job.type });
+    const { job, lane } = entry;
+    this.activeCounts[lane]++;
+    this.bus?.emit("queue:job-started", { jobId: job.id, lane, type: job.type });
 
     try {
       await this.worker(job);
-      this.bus?.emit("queue:job-completed", { jobId: job.id, type: job.type });
+      this.bus?.emit("queue:job-completed", { jobId: job.id, lane, type: job.type });
     } catch (err) {
-      this.bus?.emit("queue:job-failed", { jobId: job.id, type: job.type, error: String(err) });
+      this.bus?.emit("queue:job-failed", { jobId: job.id, lane, type: job.type, error: String(err) });
     } finally {
-      this.activeCount--;
+      this.activeCounts[lane]--;
       this.processNext();
     }
   }
