@@ -89,6 +89,20 @@ const MIGRATIONS: Migration[] = [
     CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action);
     CREATE INDEX IF NOT EXISTS idx_audit_site_id ON audit_log(site_id);`,
   },
+  {
+    version: 7,
+    name: "create_automation_rules_table",
+    sql: `CREATE TABLE IF NOT EXISTS automation_rules (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      trigger_json TEXT NOT NULL,
+      condition_json TEXT,
+      action_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );`,
+  },
 ];
 
 export class MigrationRunner {
