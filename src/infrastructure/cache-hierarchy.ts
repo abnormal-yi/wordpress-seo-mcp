@@ -19,7 +19,11 @@ export class CacheHierarchy {
     if (!this.config.enabled) return undefined;
     const entry = this.l1.get(key);
     if (entry) {
-      if (Date.now() < entry.expiresAt) return entry.value as T;
+      if (Date.now() < entry.expiresAt) {
+        this.l1.delete(key);
+        this.l1.set(key, entry);
+        return entry.value as T;
+      }
       this.l1.delete(key);
     }
     return undefined;
