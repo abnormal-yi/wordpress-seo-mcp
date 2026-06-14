@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { z } from 'zod';
 import { createMcpServer, createTransport } from './transport.js';
+import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { ToolRegistry } from './orchestrator.js';
 import { SitePool } from './services/wordpress/site-pool.js';
 import { SqliteStorage } from './services/storage/sqlite.js';
@@ -40,13 +41,18 @@ import { ScoringEngine } from './infrastructure/scoring-engine.js';
 import { CredentialManager } from './infrastructure/credential-manager.js';
 import { CircuitBreaker } from './infrastructure/circuit-breaker.js';
 import { RateLimiter } from './infrastructure/rate-limiter.js';
-import { PluginLoader } from './plugin-sdk/loader.js';
-import { PluginSandbox } from './plugin-sdk/sandbox.js';
-import { WebhookDispatcher } from './infrastructure/webhook-dispatcher.js';
-import { WorkflowEngine } from './infrastructure/workflow-engine.js';
 import { RulesEngine } from './infrastructure/rules-engine.js';
 import { ActionDispatcher } from './infrastructure/action-dispatcher.js';
 import { Pipeline } from './middleware/pipeline.js';
+import { WebhookDispatcher } from './infrastructure/webhook-dispatcher.js';
+import { WorkflowEngine } from './infrastructure/workflow-engine.js';
+import { PluginLoader } from './plugin-sdk/loader.js';
+import { PluginSandbox } from './plugin-sdk/sandbox.js';
+
+// New wiring modules
+import { registerMiddlewares } from './middleware/setup.js';
+import { wireEvents } from './core/event-wiring.js';
+import { bootstrapExternalPlugins } from './plugin-sdk/bootstrap.js';
 
 // Initialize database and run migrations
 const DB_PATH = process.env['SEO_DB_PATH'] || './data/seo.db';
@@ -72,13 +78,19 @@ const credentialManager = new CredentialManager();
 const securityStore = new SecurityStore(db);
 const circuitBreaker = new CircuitBreaker(undefined, eventBus);
 const rateLimiter = new RateLimiter();
+const webhookDispatcher = new WebhookDispatcher();
+const workflowEngine = new WorkflowEngine(eventBus);
 const pluginLoader = new PluginLoader();
 const pluginSandbox = new PluginSandbox();
-const webhookDispatcher = new WebhookDispatcher();
 const priorityQueue = new PriorityQueue(undefined, undefined, eventBus);
 const jobScheduler = new JobScheduler(priorityQueue);
-const workflowEngine = new WorkflowEngine(eventBus);
 const pipeline = new Pipeline(telemetry);
+
+// Wire: Pipeline gets real middlewares (logging, rate-limit, input validation)
+registerMiddlewares(pipeline, rateLimiter, telemetry);
+
+// Wire: EventBus → EventStore (append) + WebhookDispatcher (dispatch)
+wireEvents(eventBus, eventStore, webhookDispatcher);
 
 // Check for scheduled automation rules every 60 seconds
 jobScheduler.schedule("automation-rules-check", "meta", 60000, {});
@@ -106,7 +118,7 @@ const server = createMcpServer({
 });
 
 // Existing components (using new infra where possible)
-const sitePool = new SitePool(eventBus, lockManager, telemetry);
+const sitePool = new SitePool(eventBus, lockManager, telemetry, credentialManager, securityStore);
 const storage = new SqliteStorage();
 const actionDispatcher = new ActionDispatcher(sitePool, scoringEngine, circuitBreaker, lockManager, priorityQueue, eventBus);
 const rulesEngine = new RulesEngine(db, eventBus, actionDispatcher);
@@ -131,8 +143,11 @@ registry.register(createKeywordPlugin());
 registry.register(createIntegrationPlugin(gscClient, undefined));
 registry.register(createOrchestrationPlugin(rulesEngine, actionDispatcher));
 registry.register(createBatchAnalyzePlugin(sitePool, scoringEngine, snapshotManager, eventBus));
-registry.register(createBatchApplyPlugin(sitePool, snapshotManager, eventBus));
+registry.register(createBatchApplyPlugin(sitePool, snapshotManager, eventBus, workflowEngine));
 registry.register(createMultiSitePlugin(sitePool, scoringEngine, snapshotManager, eventBus));
+
+// Load external plugins from SEO_PLUGINS_DIR (if set)
+await bootstrapExternalPlugins(pluginLoader, pluginSandbox, registry, eventBus);
 
 // Register new Phase 1 infrastructure tools
 registry.register({
@@ -178,7 +193,44 @@ registry.register({
       }),
     },
     {
-      name: 'infra-config',
+      name: 'infra-webhook',
+      description: 'Register or list webhook endpoints that receive SEO events',
+      inputSchema: z.object({
+        action: z.enum(['register', 'list', 'deliveries']),
+        url: z.string().optional(),
+        secret: z.string().optional(),
+        events: z.array(z.string()).optional(),
+      }),
+      handler: async (args) => {
+        if (args.action === 'register') {
+          if (!args.url) return { success: false, error: 'url required' };
+          webhookDispatcher.register({
+            url: args.url,
+            secret: args.secret,
+            events: args.events ?? ['*'],
+            maxAttempts: 3,
+            timeoutMs: 10000,
+          });
+          eventBus.emit('webhook:created', { url: args.url });
+          return { success: true, data: { message: `Webhook registered: ${args.url}` } };
+        }
+        if (args.action === 'deliveries') {
+          return { success: true, data: webhookDispatcher.getDeliveries() };
+        }
+        return { success: false, error: 'Invalid action' };
+      },
+    },
+    {
+      name: 'infra-workflows',
+      description: 'List active workflows and their per-step status',
+      inputSchema: z.object({
+        siteId: z.string().optional(),
+      }),
+      handler: async (args) => ({
+        success: true,
+        data: workflowEngine.list(args.siteId),
+      }),
+    },
       description: 'Get or set configuration values',
       inputSchema: z.object({
         action: z.enum(['get', 'set']),
@@ -200,11 +252,11 @@ registry.register({
   ],
 });
 
-server.setRequestHandler({ method: 'tools/list' } as any, async () => ({
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: registry.getToolDefinitions(),
 }));
 
-server.setRequestHandler({ method: 'tools/call' } as any, async (request: any) => {
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   const start = Date.now();
   telemetry.incrementCounter("tools.called", 1, { tool: name });

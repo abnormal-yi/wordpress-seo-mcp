@@ -18,11 +18,29 @@ export class CredentialManager {
   private storage: Map<string, StoredCredential> = new Map();
 
   constructor(masterKeyHex?: string) {
-    const hex = masterKeyHex || process.env.SEO_ENCRYPTION_KEY || this.generateKey();
+    const hex = masterKeyHex || process.env.SEO_ENCRYPTION_KEY;
+    if (!hex) {
+      throw new Error(
+        "SEO_ENCRYPTION_KEY is not set. Generate one with `openssl rand -hex 32` " +
+        "and set it as an environment variable. A randomly generated key is no " +
+        "longer used as a fallback because it cannot survive process restarts, " +
+        "which would make previously stored site credentials unrecoverable."
+      );
+    }
     this.masterKey = Buffer.from(hex, "hex");
     if (this.masterKey.length !== 32) {
-      throw new Error("Master key must be 32 bytes (64 hex chars)");
+      throw new Error("SEO_ENCRYPTION_KEY must be 32 bytes (64 hex chars)");
     }
+  }
+
+  /** Returns the encrypted blob for a stored credential, for persistence in SecurityStore. */
+  export(siteId: string): string | undefined {
+    return this.storage.get(siteId)?.encrypted;
+  }
+
+  /** Loads a previously persisted encrypted blob (e.g. from SecurityStore) into memory. */
+  import(siteId: string, encrypted: string): void {
+    this.storage.set(siteId, { encrypted, createdAt: Date.now() });
   }
 
   store(siteId: string, credential: string): void {
@@ -64,9 +82,5 @@ export class CredentialManager {
 
   has(siteId: string): boolean {
     return this.storage.has(siteId);
-  }
-
-  private generateKey(): string {
-    return crypto.randomBytes(32).toString("hex");
   }
 }
