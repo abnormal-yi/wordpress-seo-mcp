@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordPress SEO MCP — Point your AI assistant at WordPress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F3F6FB;
+    --surface:#FFFFFF;
+    --surface-glass:rgba(255,255,255,0.72);
+    --border:#E1E7F0;
+    --ink:#0E1420;
+    --ink-soft:#5B6577;
+    --ink-faint:#93A0B4;
+    --primary:#3D5CFF;
+    --primary-dark:#2740D6;
+    --primary-soft:#E9EDFF;
+    --accent:#00BFA0;
+    --accent-soft:#DFF7F1;
+    --coral:#FF6A47;
+    --coral-soft:#FFE9E2;
+    --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px -8px rgba(16,24,40,0.10);
+    --shadow-lg: 0 4px 12px rgba(16,24,40,0.06), 0 24px 48px -16px rgba(61,92,255,0.18);
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,h4{ font-family:'Sora', sans-serif; letter-spacing:-0.02em; }
+  code, .mono{ font-family:'JetBrains Mono', monospace; }
+  a{ color:inherit; }
+  ::selection{ background:var(--primary); color:#fff; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 40px; }
+  @media (max-width:640px){ .wrap{ padding:0 20px; } }
+
+  /* progress bar */
+  #progress{ position:fixed; top:0; left:0; height:3px; background:linear-gradient(90deg,var(--primary),var(--accent)); width:0%; z-index:100; transition:width .1s linear; }
+
+  /* background mesh */
+  .mesh{ position:fixed; inset:0; z-index:-1; overflow:hidden; pointer-events:none; }
+  .mesh span{ position:absolute; border-radius:50%; filter:blur(90px); opacity:0.35; }
+  .mesh .b1{ width:520px; height:520px; background:var(--primary); top:-180px; right:-140px; }
+  .mesh .b2{ width:420px; height:420px; background:var(--accent); top:420px; left:-160px; opacity:0.25; }
+  .mesh .b3{ width:380px; height:380px; background:var(--coral); bottom:-120px; right:10%; opacity:0.16; }
+
+  /* reveal animation */
+  .reveal{ opacity:0; transform:translateY(22px); transition:opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+  .reveal-stagger > *{ opacity:0; transform:translateY(18px); transition:opacity .6s ease, transform .6s ease; }
+  .reveal-stagger.in > *{ opacity:1; transform:translateY(0); }
+  .reveal-stagger.in > *:nth-child(1){ transition-delay:.02s; }
+  .reveal-stagger.in > *:nth-child(2){ transition-delay:.08s; }
+  .reveal-stagger.in > *:nth-child(3){ transition-delay:.14s; }
+  .reveal-stagger.in > *:nth-child(4){ transition-delay:.20s; }
+  .reveal-stagger.in > *:nth-child(5){ transition-delay:.26s; }
+  .reveal-stagger.in > *:nth-child(6){ transition-delay:.32s; }
+  .reveal-stagger.in > *:nth-child(7){ transition-delay:.38s; }
+  .reveal-stagger.in > *:nth-child(8){ transition-delay:.44s; }
+
+  /* NAV */
+  nav{ position:sticky; top:0; z-index:60; background:rgba(243,246,251,0.78); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+  nav .inner{ display:flex; align-items:center; justify-content:space-between; height:70px; }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:15.5px; font-family:'Sora',sans-serif; }
+  .brand .logo{ width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,var(--primary),var(--accent)); display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px; font-weight:800; }
+  .nav-links{ display:flex; gap:6px; font-size:13.5px; }
+  .nav-links a{ text-decoration:none; color:var(--ink-soft); padding:8px 13px; border-radius:20px; transition:all .2s; font-weight:500; }
+  .nav-links a:hover{ color:var(--ink); background:var(--surface); }
+  .nav-links a.active{ color:var(--primary); background:var(--primary-soft); }
+  .nav-cta{ background:var(--ink); color:#fff; padding:10px 18px; border-radius:20px; font-size:13.5px; font-weight:600; text-decoration:none; white-space:nowrap; transition:transform .2s; }
+  .nav-cta:hover{ transform:translateY(-1px); }
+  @media (max-width:980px){ .nav-links{ display:none; } }
+
+  /* HERO */
+  .hero{ padding:88px 0 40px; position:relative; }
+  .hero-grid{ display:grid; grid-template-columns:1.15fr 1fr; gap:60px; align-items:center; }
+  @media (max-width:920px){ .hero-grid{ grid-template-columns:1fr; } }
+  .badge{ display:inline-flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); padding:7px 14px 7px 8px; border-radius:30px; font-size:12.5px; font-weight:600; color:var(--ink-soft); box-shadow:var(--shadow); margin-bottom:26px; }
+  .badge .pulse{ width:8px; height:8px; border-radius:50%; background:var(--accent); position:relative; }
+  .badge .pulse::after{ content:""; position:absolute; inset:-4px; border-radius:50%; border:2px solid var(--accent); animation:pulse 2s ease-out infinite; }
+  @keyframes pulse{ 0%{ transform:scale(0.6); opacity:1;} 100%{ transform:scale(1.8); opacity:0;} }
+  .hero h1{ font-size:clamp(34px,5vw,58px); font-weight:800; line-height:1.06; margin-bottom:22px; }
+  .hero h1 .grad{ background:linear-gradient(100deg,var(--primary),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero p.lead{ font-size:17.5px; color:var(--ink-soft); max-width:540px; margin-bottom:34px; }
+  .hero-ctas{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:44px; }
+  .btn-primary{ background:var(--ink); color:#fff; padding:15px 26px; border-radius:12px; text-decoration:none; font-weight:600; font-size:15px; display:inline-flex; align-items:center; gap:8px; box-shadow:var(--shadow); transition:transform .2s, box-shadow .2s; }
+  .btn-primary:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); }
+  .btn-ghost{ border:1px solid var(--border); background:var(--surface); color:var(--ink); padding:15px 26px; border-radius:12px; text-decoration:none; font-weight:600; font-size:15px; transition:all .2s; }
+  .btn-ghost:hover{ border-color:var(--primary); color:var(--primary); }
+  .trust-row{ display:flex; gap:26px; flex-wrap:wrap; }
+  .trust-row div{ font-size:12.5px; color:var(--ink-faint); font-weight:500; }
+  .trust-row b{ display:block; font-family:'Sora',sans-serif; font-size:20px; color:var(--ink); font-weight:700; }
+
+  /* hero visual: animated pipeline */
+  .hero-visual{ position:relative; }
+  .pipe-card{ background:var(--surface-glass); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:20px; padding:28px 22px; box-shadow:var(--shadow-lg); }
+  .pipe-card .title{ font-size:12px; font-weight:600; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.06em; margin-bottom:18px; display:flex; justify-content:space-between; }
+  .pipe-svg{ width:100%; height:auto; display:block; }
+  .pipe-legend{ display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+  .pipe-legend span{ font-family:'JetBrains Mono',monospace; font-size:10.5px; background:var(--surface); border:1px solid var(--border); padding:4px 9px; border-radius:6px; color:var(--ink-soft); }
+  .float-card{ position:absolute; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:12px 14px; box-shadow:var(--shadow-lg); font-size:12px; font-weight:600; display:flex; align-items:center; gap:8px; animation:float 5s ease-in-out infinite; }
+  .float-card .ic{ width:22px; height:22px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; }
+  .fc1{ top:-18px; left:-18px; animation-delay:0s; }
+  .fc1 .ic{ background:var(--accent); }
+  .fc2{ bottom:6px; right:-22px; animation-delay:1.2s; }
+  .fc2 .ic{ background:var(--coral); }
+  @keyframes float{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-10px);} }
+  @media (max-width:640px){ .float-card{ display:none; } }
+
+  /* STATS BAND */
+  .stats-band{ padding:36px 0 0; }
+  .stats-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:18px; overflow:hidden; }
+  @media (max-width:760px){ .stats-grid{ grid-template-columns:repeat(2,1fr); } }
+  .stat-cell{ background:var(--surface); padding:28px 24px; }
+  .stat-cell .num{ font-family:'Sora',sans-serif; font-size:34px; font-weight:800; color:var(--primary); }
+  .stat-cell .lbl{ font-size:13px; color:var(--ink-soft); margin-top:4px; font-weight:500; }
+
+  /* SECTIONS */
+  section{ padding:100px 0; }
+  .eyebrow{ display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:.06em; margin-bottom:16px; }
+  .eyebrow::before{ content:""; width:22px; height:2px; background:var(--primary); border-radius:2px; }
+  .sec-title{ font-size:clamp(26px,3.6vw,40px); font-weight:800; margin-bottom:16px; max-width:640px; }
+  .sec-desc{ color:var(--ink-soft); font-size:16.5px; max-width:600px; margin-bottom:52px; }
+
+  /* PROBLEM */
+  .problem-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:24px; }
+  @media (max-width:760px){ .problem-grid{ grid-template-columns:1fr; } }
+  .problem-card{ background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:32px; box-shadow:var(--shadow); }
+  .problem-card .num{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-faint); margin-bottom:14px; }
+  .problem-card h3{ font-size:19px; margin-bottom:12px; }
+  .problem-card p{ color:var(--ink-soft); font-size:14.5px; margin-bottom:10px; }
+  .problem-card.hl{ border-color:var(--primary); background:linear-gradient(180deg,var(--primary-soft),var(--surface)); }
+
+  /* ARCHITECTURE interactive */
+  .arch-panel{ background:var(--surface); border:1px solid var(--border); border-radius:22px; padding:40px; box-shadow:var(--shadow); }
+  .arch-flow{ display:flex; align-items:center; gap:0; overflow-x:auto; padding-bottom:8px; margin-bottom:30px; }
+  .arch-node{ flex-shrink:0; min-width:150px; background:var(--bg); border:1.5px solid var(--border); border-radius:14px; padding:16px; text-align:center; cursor:pointer; transition:all .25s; position:relative; }
+  .arch-node:hover, .arch-node.active{ border-color:var(--primary); background:var(--primary-soft); transform:translateY(-3px); box-shadow:var(--shadow); }
+  .arch-node .t{ font-weight:700; font-size:13.5px; }
+  .arch-node .s{ font-size:11px; color:var(--ink-faint); margin-top:2px; }
+  .arch-node.term{ border-color:var(--accent); background:var(--accent-soft); }
+  .arch-connect{ flex:1; min-width:34px; height:2px; background:repeating-linear-gradient(90deg,var(--border) 0 6px, transparent 6px 12px); position:relative; }
+  .arch-connect .dot{ position:absolute; top:-3px; width:8px; height:8px; border-radius:50%; background:var(--primary); animation:travel 3s linear infinite; }
+  @keyframes travel{ 0%{ left:0; opacity:0;} 8%{ opacity:1;} 92%{ opacity:1;} 100%{ left:100%; opacity:0;} }
+  .arch-detail{ background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:22px 24px; font-size:14.5px; color:var(--ink-soft); min-height:64px; transition:opacity .2s; }
+  .arch-detail b{ color:var(--ink); }
+
+  /* TOOL MANIFEST with tabs */
+  .tab-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:32px; }
+  .tab-btn{ font-family:'JetBrains Mono',monospace; font-size:12.5px; padding:9px 16px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--ink-soft); cursor:pointer; transition:all .2s; }
+  .tab-btn:hover{ border-color:var(--primary); color:var(--primary); }
+  .tab-btn.active{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .tool-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  @media (max-width:920px){ .tool-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:620px){ .tool-grid{ grid-template-columns:1fr; } }
+  .tool-card{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px; transition:all .25s; }
+  .tool-card:hover{ box-shadow:var(--shadow-lg); transform:translateY(-3px); border-color:var(--primary); }
+  .tool-card .cat{ display:inline-block; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--accent); background:var(--accent-soft); padding:3px 9px; border-radius:6px; margin-bottom:12px; }
+  .tool-card .name{ font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; color:var(--primary); margin-bottom:8px; }
+  .tool-card p{ font-size:13.5px; color:var(--ink-soft); }
+  .tool-card.hidden{ display:none; }
+
+  /* WORKFLOW timeline */
+  .timeline{ position:relative; padding-left:44px; }
+  .timeline::before{ content:""; position:absolute; left:15px; top:6px; bottom:6px; width:2px; background:linear-gradient(var(--primary),var(--accent)); border-radius:2px; }
+  .tl-step{ position:relative; padding-bottom:38px; }
+  .tl-step:last-child{ padding-bottom:0; }
+  .tl-step::before{ content:""; position:absolute; left:-44px; top:2px; width:32px; height:32px; border-radius:50%; background:var(--surface); border:2px solid var(--primary); }
+  .tl-step .k{ position:absolute; left:-36px; top:9px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--primary); }
+  .tl-step h4{ font-size:16px; margin-bottom:8px; }
+  .tl-step .code-block{ margin-top:10px; }
+
+  /* code block with copy */
+  .code-block{ background:#10162A; color:#DCE7F5; border-radius:12px; padding:18px 20px; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.85; position:relative; overflow-x:auto; }
+  .code-block .cm{ color:#6E7C99; }
+  .code-block .fn{ color:#6FE3C4; }
+  .code-block .arg{ color:#F3D38A; }
+  .code-block .c{ color:#6E7C99; }
+  .copy-btn{ position:absolute; top:10px; right:10px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#DCE7F5; font-size:11px; padding:6px 10px; border-radius:7px; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; }
+  .copy-btn:hover{ background:rgba(255,255,255,0.16); }
+  .copy-btn.copied{ background:var(--accent); border-color:var(--accent); color:#04241C; }
+
+  /* STRUCTURE tree */
+  .tree{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:26px 28px; font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--ink-soft); line-height:1.9; overflow-x:auto; white-space:pre; box-shadow:var(--shadow); }
+  .tree .file{ color:var(--ink); font-weight:500; }
+  .tree .cm{ color:var(--ink-faint); }
+
+  /* CALLOUT */
+  .callout{ border:1px solid var(--primary); background:linear-gradient(135deg,var(--primary-soft),var(--surface)); border-radius:18px; padding:30px 32px; display:grid; grid-template-columns:auto 1fr; gap:22px; align-items:start; }
+  .callout .icon{ width:46px; height:46px; border-radius:12px; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:11px; flex-shrink:0; }
+  .callout h3{ font-size:18px; margin-bottom:8px; }
+  .callout p{ color:var(--ink-soft); font-size:14.5px; margin-bottom:8px; }
+  .callout code{ background:var(--surface); padding:2px 7px; border-radius:5px; font-size:12.5px; border:1px solid var(--border); }
+
+  /* COMPARE */
+  .compare-wrap{ background:var(--surface); border:1px solid var(--border); border-radius:18px; overflow:hidden; box-shadow:var(--shadow); }
+  table.compare{ width:100%; border-collapse:collapse; font-size:14px; }
+  table.compare th{ font-family:'Sora',sans-serif; font-size:13px; text-align:left; padding:16px 20px; background:var(--bg); border-bottom:1px solid var(--border); }
+  table.compare td{ padding:16px 20px; border-bottom:1px solid var(--border); color:var(--ink-soft); }
+  table.compare tr:last-child td{ border-bottom:none; }
+  table.compare td.yes{ color:var(--accent); font-family:'JetBrains Mono',monospace; font-weight:700; }
+  table.compare td.no{ color:var(--ink-faint); font-family:'JetBrains Mono',monospace; }
+  table.compare tr td:first-child{ color:var(--ink); font-weight:600; }
+  table.compare tr td:last-child{ background:var(--accent-soft); }
+
+  /* WHO cards */
+  .use-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  @media (max-width:860px){ .use-grid{ grid-template-columns:1fr; } }
+  .use-card{ border:1px solid var(--border); background:var(--surface); border-radius:18px; padding:28px; transition:all .25s; }
+  .use-card:hover{ transform:translateY(-4px); box-shadow:var(--shadow-lg); border-color:var(--primary); }
+  .use-card .mark{ width:38px; height:38px; border-radius:10px; background:var(--primary-soft); color:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; margin-bottom:16px; font-family:'Sora',sans-serif; }
+  .use-card h4{ font-size:16px; margin-bottom:10px; }
+  .use-card p{ color:var(--ink-soft); font-size:14px; }
+
+  /* FAQ */
+  .faq{ max-width:760px; }
+  .faq details{ border:1px solid var(--border); border-radius:14px; margin-bottom:10px; background:var(--surface); overflow:hidden; }
+  .faq summary{ cursor:pointer; font-weight:600; font-size:15px; list-style:none; display:flex; justify-content:space-between; align-items:center; padding:18px 22px; }
+  .faq summary::-webkit-details-marker{ display:none; }
+  .faq summary .chev{ font-family:'JetBrains Mono',monospace; color:var(--primary); transition:transform .25s; font-size:15px; }
+  .faq details[open] summary .chev{ transform:rotate(45deg); }
+  .faq details p{ color:var(--ink-soft); padding:0 22px 20px; font-size:14.5px; }
+
+  /* INSTALL steps already timeline-based reused via .tl2 */
+  .install-panel{ background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:8px; box-shadow:var(--shadow); }
+  .steps{ counter-reset:step; padding:24px; }
+  .step{ display:grid; grid-template-columns:40px 1fr; gap:18px; margin-bottom:30px; }
+  .step:last-child{ margin-bottom:0; }
+  .step .num{ counter-increment:step; font-family:'JetBrains Mono',monospace; background:var(--primary-soft); color:var(--primary); width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; }
+  .step .num::before{ content: counter(step, decimal-leading-zero); }
+  .step h4{ font-size:15.5px; margin-bottom:10px; }
+
+  /* CTA */
+  .cta-band{ background:linear-gradient(135deg,var(--ink),#1B2547); border-radius:26px; padding:64px 44px; text-align:center; position:relative; overflow:hidden; }
+  .cta-band::before{ content:""; position:absolute; width:400px; height:400px; background:var(--primary); filter:blur(100px); opacity:0.35; top:-140px; right:-100px; }
+  .cta-band h2{ font-size:clamp(26px,3.6vw,38px); margin-bottom:14px; color:#fff; position:relative; }
+  .cta-band p{ color:#B7C0DA; margin-bottom:30px; position:relative; font-size:16px; }
+  .cta-band .btn-primary{ background:#fff; color:var(--ink); position:relative; }
+
+  footer{ padding:48px 0 60px; }
+  footer .wrap{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+  footer .fnote{ color:var(--ink-faint); font-size:13px; }
+  .to-top{ font-size:13px; color:var(--ink-soft); text-decoration:none; font-weight:600; }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<div class="mesh"><span class="b1"></span><span class="b2"></span><span class="b3"></span></div>
+
+<nav>
+  <div class="wrap inner">
+    <div class="brand"><span class="logo">SEO</span> wordpress-seo-mcp</div>
+    <div class="nav-links" id="navlinks">
+      <a href="#problem" data-sec="problem">Why</a>
+      <a href="#architecture" data-sec="architecture">Architecture</a>
+      <a href="#manifest" data-sec="manifest">Tools</a>
+      <a href="#workflow" data-sec="workflow">Workflow</a>
+      <a href="#compare" data-sec="compare">Compare</a>
+      <a href="#faq" data-sec="faq">FAQ</a>
+      <a href="#install" data-sec="install">Install</a>
+    </div>
+    <a class="nav-cta" href="https://github.com/abnormal-yi/wordpress-seo-mcp" target="_blank" rel="noopener">Star on GitHub</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="badge"><span class="pulse"></span> MIT licensed · Model Context Protocol server</div>
+      <h1>Give your AI assistant <span class="grad">SEO hands</span> on WordPress.</h1>
+      <p class="lead">Connect Claude Code, Cursor, opencode, or any MCP-compatible AI directly to your WordPress REST API. It reads the page, flags what's broken, fixes it, and logs every change so it can undo it later.</p>
+      <div class="hero-ctas">
+        <a class="btn-primary" href="https://github.com/abnormal-yi/wordpress-seo-mcp" target="_blank" rel="noopener">Get the repo →</a>
+        <a class="btn-ghost" href="#install">Read quick start</a>
+      </div>
+      <div class="trust-row">
+        <div><b>13</b>MCP tools</div>
+        <div><b>8</b>Plugins</div>
+        <div><b>70+</b>Tests</div>
+        <div><b>100%</b>TypeScript</div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="float-card fc1"><span class="ic">✓</span> apply-seo done</div>
+      <div class="float-card fc2"><span class="ic">↺</span> rollback ready</div>
+      <div class="pipe-card">
+        <div class="title"><span>REQUEST PATH</span><span>live</span></div>
+        <svg class="pipe-svg" viewBox="0 0 320 220" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#3D5CFF"/>
+              <stop offset="100%" stop-color="#00BFA0"/>
+            </linearGradient>
+          </defs>
+          <path d="M20,40 C90,40 90,110 160,110 C230,110 230,180 300,180" fill="none" stroke="#E1E7F0" stroke-width="3"/>
+          <path d="M20,40 C90,40 90,110 160,110 C230,110 230,180 300,180" fill="none" stroke="url(#lg)" stroke-width="3" stroke-dasharray="6 10" stroke-linecap="round">
+            <animate attributeName="stroke-dashoffset" from="0" to="-160" dur="4s" repeatCount="indefinite"/>
+          </path>
+          <circle cx="20" cy="40" r="7" fill="#3D5CFF"/>
+          <circle cx="160" cy="110" r="7" fill="#0E1420"/>
+          <circle cx="300" cy="180" r="7" fill="#00BFA0"/>
+          <text x="20" y="24" font-size="10" font-family="JetBrains Mono" fill="#5B6577">Assistant</text>
+          <text x="120" y="98" font-size="10" font-family="JetBrains Mono" fill="#5B6577">Middleware</text>
+          <text x="228" y="200" font-size="10" font-family="JetBrains Mono" fill="#5B6577">WordPress</text>
+        </svg>
+        <div class="pipe-legend">
+          <span>auth</span><span>validate</span><span>rate-limit</span><span>cache</span><span>audit-log</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="stats-band wrap">
+  <div class="stats-grid reveal-stagger" id="statgrid">
+    <div class="stat-cell"><div class="num" data-count="13">0</div><div class="lbl">MCP tools registered</div></div>
+    <div class="stat-cell"><div class="num" data-count="8">0</div><div class="lbl">Plugin modules</div></div>
+    <div class="stat-cell"><div class="num" data-count="70" data-suffix="+">0</div><div class="lbl">Automated tests</div></div>
+    <div class="stat-cell"><div class="num" data-count="5" data-prefix="0">0</div><div class="lbl">Middleware stages</div></div>
+  </div>
+</div>
+
+<section id="problem">
+  <div class="wrap">
+    <div class="eyebrow reveal">Why this exists</div>
+    <h2 class="sec-title reveal">Manual SEO doesn't scale. Dashboards don't fit in your workflow.</h2>
+    <p class="sec-desc reveal">Most WordPress SEO work is either done by hand, page by page, or handed to a plugin dashboard that lives behind a login — outside the terminal or editor where the actual work happens.</p>
+    <div class="problem-grid reveal-stagger">
+      <div class="problem-card">
+        <div class="num">// 01 — manual route</div>
+        <h3>Checking pages one at a time</h3>
+        <p>Opening every post to check a title tag, an alt attribute, or a stale canonical URL doesn't scale past a handful of pages.</p>
+        <p>And it leaves no record of what changed, or why.</p>
+      </div>
+      <div class="problem-card">
+        <div class="num">// 02 — dashboard route</div>
+        <h3>Plugin UIs that live elsewhere</h3>
+        <p>Helpful, but disconnected from the editor or terminal session where content actually gets written and reviewed.</p>
+      </div>
+      <div class="problem-card hl" style="grid-column:1/-1;">
+        <div class="num">// 03 — the MCP route</div>
+        <h3>SEO as tools your assistant can call directly</h3>
+        <p>Every read is a structured analysis. Every write passes through validation, rate limiting, and a SQLite audit log — so "apply the fix" is never a one-way door. Ask in plain language, or call the tools yourself.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="architecture">
+  <div class="wrap">
+    <div class="eyebrow reveal">Architecture</div>
+    <h2 class="sec-title reveal">Click a stage to see what runs there.</h2>
+    <p class="sec-desc reveal">A single call from your AI assistant passes through five middleware stages before reaching a plugin, and the plugin before it ever touches WordPress.</p>
+    <div class="arch-panel reveal">
+      <div class="arch-flow" id="archFlow">
+        <div class="arch-node active" data-detail="Whatever speaks MCP — Claude Code, Cursor, or opencode — sends a tool call like <b>apply-seo</b> with a site and post ID.">
+          <div class="t">AI Assistant</div><div class="s">Claude, Cursor…</div>
+        </div>
+        <div class="arch-connect"><div class="dot" style="animation-delay:0s"></div></div>
+        <div class="arch-node" data-detail="The call arrives over the <b>MCP stdio transport</b> and is handed to the orchestrator's tool registry.">
+          <div class="t">MCP Protocol</div><div class="s">stdio transport</div>
+        </div>
+        <div class="arch-connect"><div class="dot" style="animation-delay:.7s"></div></div>
+        <div class="arch-node" data-detail="Five stages run in order: <b>logging, auth, validation, rate limiting, and cache</b> — before any plugin sees the request.">
+          <div class="t">Middleware</div><div class="s">5 stages</div>
+        </div>
+        <div class="arch-connect"><div class="dot" style="animation-delay:1.4s"></div></div>
+        <div class="arch-node" data-detail="The matching plugin runs — <b>meta, schema, content, images, technical, sitemap, keyword,</b> or <b>integration</b> — and every write is logged to SQLite first.">
+          <div class="t">Plugin System</div><div class="s">8 plugins</div>
+        </div>
+        <div class="arch-connect"><div class="dot" style="animation-delay:2.1s"></div></div>
+        <div class="arch-node term" data-detail="The plugin talks to WordPress over its <b>REST API</b> using the site's Application Password — no extra plugin install required on the WordPress side.">
+          <div class="t">WordPress</div><div class="s">REST API</div>
+        </div>
+      </div>
+      <div class="arch-detail" id="archDetail">Whatever speaks MCP — Claude Code, Cursor, or opencode — sends a tool call like <b>apply-seo</b> with a site and post ID.</div>
+    </div>
+  </div>
+</section>
+
+<section id="manifest">
+  <div class="wrap">
+    <div class="eyebrow reveal">Tool manifest</div>
+    <h2 class="sec-title reveal">13 tools. Filter by what you're trying to fix.</h2>
+    <p class="sec-desc reveal">Every tool the server registers with your AI assistant, grouped by the part of SEO it handles.</p>
+    <div class="tab-row reveal" id="tabRow">
+      <button class="tab-btn active" data-cat="all">All tools</button>
+      <button class="tab-btn" data-cat="meta">Meta</button>
+      <button class="tab-btn" data-cat="schema">Schema</button>
+      <button class="tab-btn" data-cat="content">Content</button>
+      <button class="tab-btn" data-cat="technical">Technical</button>
+      <button class="tab-btn" data-cat="ops">Sitemap &amp; ops</button>
+    </div>
+    <div class="tool-grid reveal-stagger" id="toolGrid">
+      <div class="tool-card" data-cat="ops"><span class="cat">Setup</span><div class="name">manage-sites</div><p>Add, list, or remove connected WordPress sites.</p></div>
+      <div class="tool-card" data-cat="meta"><span class="cat">Meta</span><div class="name">analyze-seo</div><p>Checks meta title, description, OG, and Twitter tags.</p></div>
+      <div class="tool-card" data-cat="meta"><span class="cat">Meta</span><div class="name">apply-seo</div><p>Fixes missing, short, or overlong meta tags.</p></div>
+      <div class="tool-card" data-cat="schema"><span class="cat">Schema</span><div class="name">analyze-schema</div><p>Inspects existing JSON-LD structured data on a page.</p></div>
+      <div class="tool-card" data-cat="schema"><span class="cat">Schema</span><div class="name">apply-schema</div><p>Injects Article, Organization, and BreadcrumbList schema.</p></div>
+      <div class="tool-card" data-cat="content"><span class="cat">Content</span><div class="name">analyze-content</div><p>Checks headings, word count, and keyword usage.</p></div>
+      <div class="tool-card" data-cat="content"><span class="cat">Content</span><div class="name">analyze-images</div><p>Checks alt text and lazy-loading on page images.</p></div>
+      <div class="tool-card" data-cat="technical"><span class="cat">Technical</span><div class="name">analyze-technical</div><p>Checks canonical URL, robots rules, and hreflang.</p></div>
+      <div class="tool-card" data-cat="ops"><span class="cat">Ops</span><div class="name">generate-sitemap</div><p>Generates an XML sitemap, optionally submitted to Google.</p></div>
+      <div class="tool-card" data-cat="content"><span class="cat">Content</span><div class="name">suggest-keywords</div><p>Generates keyword ideas for a given topic.</p></div>
+      <div class="tool-card" data-cat="ops"><span class="cat">Ops</span><div class="name">search-analytics</div><p>Pulls Google Search Console analytics, if configured.</p></div>
+      <div class="tool-card" data-cat="ops"><span class="cat">Ops</span><div class="name">rollback-seo</div><p>Undoes the last SEO change made to a page.</p></div>
+      <div class="tool-card" data-cat="ops"><span class="cat">Ops</span><div class="name">get-seo-history</div><p>Views the full change history for a page.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="workflow">
+  <div class="wrap">
+    <div class="eyebrow reveal">Workflow</div>
+    <h2 class="sec-title reveal">Or just tell your AI what you want.</h2>
+    <p class="sec-desc reveal">"Optimize this page for SEO" runs this exact sequence automatically. Here's what it looks like called directly.</p>
+    <div class="timeline reveal">
+      <div class="tl-step"><span class="k">01</span>
+        <h4>Register the site once</h4>
+        <div class="code-block">
+          <button class="copy-btn">Copy</button>
+<span class="fn">manage-sites</span>({ action: <span class="arg">"add"</span>, name: <span class="arg">"my-site"</span>, config: { url, username, appPassword } })
+        </div>
+      </div>
+      <div class="tl-step"><span class="k">02</span>
+        <h4>Analyze the page</h4>
+        <div class="code-block">
+          <button class="copy-btn">Copy</button>
+<span class="fn">analyze-seo</span>({ site: <span class="arg">"my-site"</span>, postId: <span class="arg">42</span> })
+<span class="fn">analyze-content</span>({ site: <span class="arg">"my-site"</span>, postId: <span class="arg">42</span>, keyword: <span class="arg">"seo tools"</span> })
+<span class="fn">analyze-schema</span>({ site: <span class="arg">"my-site"</span>, postId: <span class="arg">42</span> })
+        </div>
+      </div>
+      <div class="tl-step"><span class="k">03</span>
+        <h4>Apply fixes</h4>
+        <div class="code-block">
+          <button class="copy-btn">Copy</button>
+<span class="fn">apply-seo</span>({ site: <span class="arg">"my-site"</span>, postId: <span class="arg">42</span>, fixes: [<span class="arg">"missing-title"</span>, <span class="arg">"missing-desc"</span>] })
+<span class="fn">apply-schema</span>({ site: <span class="arg">"my-site"</span>, postId: <span class="arg">42</span>, schemas: [<span class="arg">"Article"</span>, <span class="arg">"Organization"</span>] })
+        </div>
+      </div>
+      <div class="tl-step"><span class="k">04</span>
+        <h4>Regenerate the sitemap</h4>
+        <div class="code-block">
+          <button class="copy-btn">Copy</button>
+<span class="fn">generate-sitemap</span>({ site: <span class="arg">"my-site"</span> })
+        </div>
+      </div>
+      <div class="tl-step"><span class="k">05</span>
+        <h4>Roll back if needed</h4>
+        <div class="code-block">
+          <button class="copy-btn">Copy</button>
+<span class="fn">rollback-seo</span>({ site: <span class="arg">"my-site"</span>, postId: <span class="arg">42</span> })
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="structure">
+  <div class="wrap">
+    <div class="eyebrow reveal">Under the hood</div>
+    <h2 class="sec-title reveal">Plugin-based, one file per concern.</h2>
+    <p class="sec-desc reveal">Every SEO capability is isolated behind the same plugin interface, so adding a new check means adding a new plugin — not touching the pipeline.</p>
+<div class="tree reveal">src/
+├── <span class="file">index.ts</span>                    <span class="cm"># entry point — wires plugins + services</span>
+├── <span class="file">transport.ts</span>                <span class="cm"># MCP stdio transport</span>
+├── <span class="file">orchestrator.ts</span>              <span class="cm"># tool registry + plugin interface</span>
+├── middleware/<span class="file">pipeline.ts</span>       <span class="cm"># middleware pipeline runner</span>
+├── plugins/
+│   ├── <span class="file">management.ts</span>            <span class="cm"># manage-sites tool</span>
+│   ├── meta/                       <span class="cm"># meta tag analyzer + applier</span>
+│   ├── schema/                     <span class="cm"># JSON-LD analyzer + applier</span>
+│   ├── content/                    <span class="cm"># content SEO analyzer</span>
+│   ├── images/                     <span class="cm"># image SEO analyzer</span>
+│   ├── technical/                  <span class="cm"># technical SEO analyzer</span>
+│   ├── sitemap/                    <span class="cm"># XML sitemap generator</span>
+│   ├── keyword/                    <span class="cm"># keyword suggestion engine</span>
+│   ├── <span class="file">rollback.ts</span>              <span class="cm"># rollback + history tools</span>
+│   └── integration/                <span class="cm"># GSC + PageSpeed tools</span>
+├── services/
+│   ├── wordpress/                  <span class="cm"># REST API client + site pool</span>
+│   ├── storage/                    <span class="cm"># SQLite audit log</span>
+│   └── external/                   <span class="cm"># GSC + PageSpeed API adapters</span>
+└── types/                          <span class="cm"># shared type definitions</span></div>
+  </div>
+</section>
+
+<section id="gsc">
+  <div class="wrap">
+    <div class="eyebrow reveal">Optional add-on</div>
+    <h2 class="sec-title reveal">Google Search Console, if you want it.</h2>
+    <div class="callout reveal">
+      <div class="icon">GSC</div>
+      <div>
+        <h3>Two environment variables unlock analytics and sitemap submission.</h3>
+        <p>Set <code>GSC_API_KEY</code> and <code>GSC_SITE_URL</code> in the server's environment config, and the <code>search-analytics</code> tool comes online — plus automatic sitemap submission from <code>generate-sitemap</code>.</p>
+        <p>Leave them unset and everything else works exactly the same; this is additive, not a requirement.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <div class="wrap">
+    <div class="eyebrow reveal">Comparison</div>
+    <h2 class="sec-title reveal">Where this sits relative to other approaches.</h2>
+    <p class="sec-desc reveal">Not a replacement for a full SEO suite — a narrower, auditable layer for the fixes an AI assistant can safely make on its own.</p>
+    <div class="compare-wrap reveal">
+      <table class="compare">
+        <thead><tr><th></th><th>Manual, page by page</th><th>Dashboard plugin</th><th>wordpress-seo-mcp</th></tr></thead>
+        <tbody>
+          <tr><td>Runs inside your AI assistant's session</td><td class="no">✕</td><td class="no">✕</td><td class="yes">✓</td></tr>
+          <tr><td>Structured before/after analysis</td><td class="no">✕</td><td class="no">partial</td><td class="yes">✓</td></tr>
+          <tr><td>Change history per post</td><td class="no">✕</td><td class="no">partial</td><td class="yes">✓</td></tr>
+          <tr><td>One-call rollback</td><td class="no">✕</td><td class="no">✕</td><td class="yes">✓</td></tr>
+          <tr><td>Works across many sites from one config</td><td class="no">✕</td><td class="no">✕</td><td class="yes">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="who">
+  <div class="wrap">
+    <div class="eyebrow reveal">Who it's for</div>
+    <h2 class="sec-title reveal">Built for three kinds of WordPress work.</h2>
+    <div class="use-grid reveal-stagger">
+      <div class="use-card">
+        <div class="mark">A</div>
+        <h4>Agencies managing many clients</h4>
+        <p>Register each client site once, then run the same analysis-and-fix pass across all of them from one assistant session.</p>
+      </div>
+      <div class="use-card">
+        <div class="mark">S</div>
+        <h4>Solo site owners</h4>
+        <p>Ask the assistant in plain language and let it run the checklist — no dashboard to learn first.</p>
+      </div>
+      <div class="use-card">
+        <div class="mark">D</div>
+        <h4>Developers scripting pipelines</h4>
+        <p>Call the tools directly from Claude Code, Cursor, or opencode as part of a larger publishing or migration workflow.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="eyebrow reveal">FAQ</div>
+    <h2 class="sec-title reveal">Frequently asked.</h2>
+    <div class="faq reveal">
+      <details open>
+        <summary>Which AI assistants does this work with?<span class="chev">+</span></summary>
+        <p>Anything that speaks the Model Context Protocol — the README specifically calls out opencode, Claude Code, and Cursor, but any MCP-compatible client will work.</p>
+      </details>
+      <details>
+        <summary>What does WordPress need to support?<span class="chev">+</span></summary>
+        <p>A site with the REST API enabled, plus an Application Password for authentication — no separate plugin install required on the WordPress side.</p>
+      </details>
+      <details>
+        <summary>What happens if a fix goes wrong?<span class="chev">+</span></summary>
+        <p>Every applied change is written to a local SQLite audit log first, so <code>rollback-seo</code> can undo the most recent change to a given page.</p>
+      </details>
+      <details>
+        <summary>Is Google Search Console required?<span class="chev">+</span></summary>
+        <p>No. It's optional — set two environment variables to enable analytics and sitemap submission; everything else runs without it.</p>
+      </details>
+      <details>
+        <summary>How is it licensed?<span class="chev">+</span></summary>
+        <p>MIT. The source, tests, and docs are in the public GitHub repository.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <div class="eyebrow reveal">Quick start</div>
+    <h2 class="sec-title reveal">Running in under five minutes.</h2>
+    <p class="sec-desc reveal">Requires Node.js 18+ and a WordPress site with the REST API enabled.</p>
+    <div class="install-panel reveal">
+      <div class="steps">
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h4>Clone and build</h4>
+            <div class="code-block">
+              <button class="copy-btn">Copy</button>
+<span class="c">$</span> git clone https://github.com/abnormal-yi/wordpress-seo-mcp.git
+<span class="c">$</span> cd wordpress-seo-mcp
+<span class="c">$</span> npm install
+<span class="c">$</span> npm run build
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h4>Register the server in opencode.jsonc</h4>
+            <div class="code-block">
+              <button class="copy-btn">Copy</button>
+{
+  "mcp": {
+    "wordpress-seo-mcp": {
+      "type": "local",
+      "command": ["node", "/path/to/wordpress-seo-mcp/dist/index.js"],
+      "enabled": true,
+      "environment": {}
+    }
+  }
+}
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h4>Restart your assistant</h4>
+            <p style="color:var(--ink-soft); font-size:14.5px; margin-bottom:8px;">The server starts automatically and exposes all 13 tools. From here, just say:</p>
+            <div class="code-block">
+              <button class="copy-btn">Copy</button>
+<span class="c">// no tool syntax needed</span>
+"Optimize this WordPress page for SEO"
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h4>Local development commands</h4>
+            <div class="code-block">
+              <button class="copy-btn">Copy</button>
+<span class="c">$</span> npm run dev        <span class="c">// watch mode</span>
+<span class="c">$</span> npm test           <span class="c">// 70+ tests</span>
+<span class="c">$</span> npm run typecheck  <span class="c">// TypeScript check</span>
+<span class="c">$</span> npm run build      <span class="c">// production build</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="cta-band reveal">
+      <h2>Point your AI assistant at WordPress.</h2>
+      <p>Free, MIT-licensed, and works alongside Claude Code, Cursor, and opencode.</p>
+      <a class="btn-primary" href="https://github.com/abnormal-yi/wordpress-seo-mcp" target="_blank" rel="noopener">Star it on GitHub →</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="brand"><span class="logo">SEO</span> wordpress-seo-mcp</div>
+    <span class="fnote">abnormal-yi/wordpress-seo-mcp · MIT License</span>
+    <a class="to-top" href="#">Back to top ↑</a>
+  </div>
+</footer>
+
+<script>
+  // scroll progress
+  const progress = document.getElementById('progress');
+  function updateProgress(){
+    const h = document.documentElement;
+    const scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    progress.style.width = scrolled + '%';
+  }
+  document.addEventListener('scroll', updateProgress, { passive:true });
+
+  // reveal on scroll
+  const revealEls = document.querySelectorAll('.reveal, .reveal-stagger');
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold:0.15 });
+  revealEls.forEach(el=>io.observe(el));
+
+  // animated counters
+  const counters = document.querySelectorAll('[data-count]');
+  const cio = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        const el = e.target;
+        const target = parseInt(el.getAttribute('data-count'),10);
+        const suffix = el.getAttribute('data-suffix') || '';
+        const prefix = el.getAttribute('data-prefix') || '';
+        let cur = 0;
+        const dur = 900;
+        const start = performance.now();
+        function tick(now){
+          const p = Math.min(1,(now-start)/dur);
+          const eased = 1-Math.pow(1-p,3);
+          cur = Math.round(target*eased);
+          el.textContent = (prefix && cur < 10 ? prefix : '') + cur + suffix;
+          if(p<1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+        cio.unobserve(el);
+      }
+    });
+  }, { threshold:0.4 });
+  counters.forEach(el=>cio.observe(el));
+
+  // scrollspy
+  const navLinks = document.querySelectorAll('#navlinks a');
+  const sections = Array.from(navLinks).map(a=>document.getElementById(a.dataset.sec)).filter(Boolean);
+  const spy = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      const id = entry.target.id;
+      const link = document.querySelector('#navlinks a[data-sec="'+id+'"]');
+      if(entry.isIntersecting && link){
+        navLinks.forEach(l=>l.classList.remove('active'));
+        link.classList.add('active');
+      }
+    });
+  }, { rootMargin:'-40% 0px -50% 0px' });
+  sections.forEach(s=>spy.observe(s));
+
+  // architecture interactive
+  const archNodes = document.querySelectorAll('.arch-node');
+  const archDetail = document.getElementById('archDetail');
+  archNodes.forEach(node=>{
+    node.addEventListener('click', ()=>{
+      archNodes.forEach(n=>n.classList.remove('active'));
+      node.classList.add('active');
+      archDetail.innerHTML = node.getAttribute('data-detail');
+    });
+  });
+
+  // tool tab filter
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const toolCards = document.querySelectorAll('.tool-card');
+  tabBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      tabBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const cat = btn.dataset.cat;
+      toolCards.forEach(card=>{
+        if(cat==='all' || card.dataset.cat===cat){ card.classList.remove('hidden'); }
+        else{ card.classList.add('hidden'); }
+      });
+    });
+  });
+
+  // copy to clipboard
+  document.querySelectorAll('.copy-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const block = btn.parentElement;
+      const text = block.innerText.replace('Copy','').trim();
+      navigator.clipboard.writeText(text).then(()=>{
+        btn.textContent = 'Copied ✓';
+        btn.classList.add('copied');
+        setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('copied'); }, 1600);
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
